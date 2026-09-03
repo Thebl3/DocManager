@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DocManager.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DocManager.Core\DocManager.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.12" />
+  </ItemGroup>
+</Project>

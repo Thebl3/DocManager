@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+TestResults/
+artifacts/
+
+# Dữ liệu làm việc: catalogue của hãng và bảng giá thương mại.
+# Giữ ngoài repo. Thư mục vẫn tồn tại trên máy, chỉ không theo dõi bằng git.
+/Product Family/
+/Product excel file/
+
+# Bản portable. Phát hành qua GitHub Releases, không đưa vào repo.
+/App/

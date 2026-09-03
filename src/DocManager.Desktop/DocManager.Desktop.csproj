@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DocManager.Core\DocManager.Core.csproj" />
+    <ProjectReference Include="..\DocManager.Dialux\DocManager.Dialux.csproj" />
+    <ProjectReference Include="..\DocManager.Signify\DocManager.Signify.csproj" />
+    <ProjectReference Include="..\DocManager.Photometry\DocManager.Photometry.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+</Project>

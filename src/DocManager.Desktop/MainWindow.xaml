@@ -1,0 +1,198 @@
+<Window x:Class="DocManager.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DocManager" Height="690" Width="970" MinHeight="690" MinWidth="970" MaxHeight="690" MaxWidth="970"
+        ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Background="#F5F7FA" Closing="MainWindow_Closing" StateChanged="MainWindow_StateChanged" Icon="pack://application:,,,/Assets/app.ico">
+    <Window.Resources>
+        <Style TargetType="Button"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="12,7"/><Setter Property="MinHeight" Value="32"/><Setter Property="IsEnabled" Value="{Binding IsNotBusy}"/></Style>
+        <Style TargetType="TextBox"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="6"/><Setter Property="IsEnabled" Value="{Binding IsNotBusy}"/></Style>
+        <Style TargetType="ListBox"><Setter Property="IsEnabled" Value="{Binding IsNotBusy}"/></Style>
+        <Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="{Binding IsNotBusy}"/></Style>
+        <Style TargetType="DataGrid"><Setter Property="IsEnabled" Value="{Binding IsNotBusy}"/></Style>
+        <Style TargetType="GroupBox"><Setter Property="Margin" Value="8"/><Setter Property="Padding" Value="8"/></Style>
+        <Style TargetType="Label"><Setter Property="VerticalAlignment" Value="Center"/></Style>
+    </Window.Resources>
+    <Grid Margin="10">
+        <TabControl x:Name="MainTabs">
+            <TabItem Header="DiaLux → Excel">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Margin="10" FontSize="18" FontWeight="SemiBold" Text="Xuất Lighting Schedule từ báo cáo DiaLux"/>
+
+                    <GroupBox Grid.Row="1" Header="Đường dẫn dữ liệu">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Label Content="Catalogue:"/>
+                            <TextBox Grid.Column="1" x:Name="CataloguePathBox" LostFocus="CataloguePathBox_LostFocus"/>
+                            <Label Grid.Row="1" Content="Form Excel:"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="ExistingFormBox" LostFocus="ExistingFormBox_LostFocus"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" MinWidth="260"/>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="2*" MinWidth="260"/>
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox Grid.Column="0" Header="Danh sách PDF DiaLux">
+                            <Grid>
+                                <ListBox x:Name="PdfList" AllowDrop="True" Drop="PdfList_Drop" SelectionMode="Extended">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" ToolTip="{Binding FullPath}">
+                                                <Image Width="16" Height="16" Margin="0,0,6,0" Source="{Binding Icon}"/>
+                                                <TextBlock VerticalAlignment="Center" Text="{Binding DisplayName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock x:Name="PdfListPlaceholder" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center" Text="Kéo file PDF vào đây, hoặc bấm Chọn PDF" Foreground="#A0A0A0" FontStyle="Italic"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <GroupBox Grid.Column="1" Header="Thao tác">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <Button Content="Chọn / thêm PDF" Click="SelectPdf_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Content="Xóa file đã chọn" Click="RemovePdf_Click" HorizontalAlignment="Stretch"/>
+                                    <Separator Margin="3,7"/>
+                                    <Button Content="Chọn thư mục catalogue" Click="BrowseCatalogue_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Content="Chọn output" Click="SelectExcelOutput_Click" HorizontalAlignment="Stretch"/>
+                                    <CheckBox x:Name="MergeCheck" Content="Gộp Excel" Margin="8"/>
+                                    <Button Content="Xuất Excel" Click="ExportExcel_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Content="Kiểm tra catalogue thiếu" Click="CheckMissing_Click" HorizontalAlignment="Stretch"/>
+                                    <Separator Margin="3,7"/>
+                                    <Button Content="Chọn / kiểm tra / điền form" Click="AppendForm_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Content="Hủy" Click="Cancel_Click" IsEnabled="True" HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </GroupBox>
+
+                        <GroupBox Grid.Column="2" Header="Nhật ký">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Mở thư mục output" Click="OpenDialuxFolder_Click"/>
+                                    <Button Content="Xóa log" Click="ClearDialuxLog_Click"/>
+                                </StackPanel>
+                                <TextBox Grid.Row="1" x:Name="DialuxLog" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="CadSymbolTab" Header="CAD Symbol">
+                <Grid Margin="6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <WrapPanel Grid.Row="0" Margin="3">
+                        <Button Content="Chọn file Excel có sẵn" Click="SelectExistingCadExcel_Click"/>
+                        <Button Content="Dán ảnh" Click="PasteCadSymbol_Click"/>
+                        <Button Content="Chọn ảnh" Click="ChooseCadSymbolImage_Click"/>
+                        <Button Content="Xóa ảnh" Click="RemoveCadSymbolImage_Click"/>
+                        <CheckBox x:Name="AutoUpdateCadSymbolsCheck" Content="Tự cập nhật file hiện tại" Margin="12,8"/>
+                        <Button Content="Cập nhật file Excel" Click="UpdateCadSymbolWorkbooks_Click"/>
+                    </WrapPanel>
+                    <Grid Grid.Row="1" Margin="8,0,8,2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="CadTargetKindText" FontWeight="SemiBold" VerticalAlignment="Center" Text="Chưa có file Excel hiện tại"/>
+                        <TextBlock Grid.Column="1" x:Name="CadTargetPathText" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                    </Grid>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+                        <GroupBox Grid.Column="0" Header="Model từ file Excel">
+                            <DataGrid x:Name="CadSymbolGrid" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CadSymbolGrid_SelectionChanged">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Proposed calculation model" Binding="{Binding DisplayModel}" Width="*"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110"/>
+                                    <DataGridTextColumn Header="Số dòng" Binding="{Binding UsageCount}" Width="70"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </GroupBox>
+                        <GroupBox Grid.Column="1" Header="Xem trước">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <TextBlock x:Name="CadSymbolSelectedModel" Margin="6" FontWeight="SemiBold" TextWrapping="Wrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                                <Border Grid.Row="1" Margin="6" Padding="8" BorderBrush="#C9D1D9" BorderThickness="1" Background="White">
+                                    <Image x:Name="CadSymbolPreview" Stretch="Uniform"/>
+                                </Border>
+                                <TextBlock Grid.Row="2" x:Name="CadSymbolDimensions" Margin="6,3"/>
+                                <TextBlock Grid.Row="3" x:Name="CadSymbolSource" Margin="6,3" TextWrapping="Wrap"/>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                    <TextBlock Grid.Row="3" x:Name="CadSymbolStatus" Margin="8" TextWrapping="Wrap"/>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="CatalogueTab" Header="Catalogue Downloader">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="2*"/><RowDefinition Height="Auto"/><RowDefinition Height="2.5*"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Margin="10" FontSize="18" FontWeight="SemiBold" Text="Tải catalogue và quang trắc Signify"/>
+                    <Grid Grid.Row="1" Margin="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Label Content="Pricelist:"/><TextBox Grid.Column="1" x:Name="PricelistBox" LostFocus="PricelistBox_LostFocus"/><Button Grid.Column="2" Content="Chọn" Click="SelectPricelist_Click"/><Label Grid.Column="3" Content="Product Family:"/><TextBox Grid.Column="4" x:Name="DownloadRootBox" MinWidth="280" LostFocus="DownloadRootBox_LostFocus"/><Button Grid.Column="5" Content="Duyệt" Click="BrowseDownloadRoot_Click"/>
+                    </Grid>
+                    <Grid Grid.Row="2" Margin="8"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="CodesBox" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextChanged="CodesBox_TextChanged" ToolTip="Một mã mỗi dòng hoặc cách nhau bằng dấu phẩy"/>
+                        <ListBox Grid.Column="1" x:Name="SuggestionsList" MouseDoubleClick="SuggestionsList_MouseDoubleClick" DisplayMemberPath="MaterialDescription"/>
+                    </Grid>
+                    <WrapPanel Grid.Row="3" Margin="8"><CheckBox x:Name="DownloadIesCheck" Content="Tải file IES" Margin="8"/><CheckBox x:Name="ForceCheck" Content="Tải lại, ghi đè file đã có" ToolTip="Tải lại và ghi đè các file đã tồn tại" Margin="8"/><Button Content="Tải PDF / IES / LDT" Click="Download_Click"/><Button Content="Kiểm tra file đã có" Click="CheckExisting_Click"/><Button Content="Đổi IES → LDT theo mã" Click="ConvertCodes_Click"/><Button Content="Xuất file LDT" ToolTip="Sao chép các LDT đúng mã vào thư mục con File đèn" Click="ExportLdtFiles_Click"/><Button Content="Xuất file PDF" ToolTip="Sao chép các PDF catalogue đúng mã vào thư mục con Catalouge đèn" Click="ExportPdfFiles_Click"/><Button Content="Mở folder theo mã" Click="OpenProductFolder_Click"/><Button Content="Mở PDF theo mã" Click="OpenProductPdf_Click"/><Button Content="Kết quả" Click="ShowDownloadResultsDrawer_Click"/><Button Content="Hủy" Click="Cancel_Click" IsEnabled="True"/></WrapPanel>
+                    <GroupBox Grid.Row="4" Header="Tiến độ / nhật ký"><Grid><TextBox x:Name="DownloadLog" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/><StackPanel HorizontalAlignment="Right" VerticalAlignment="Top"><ProgressBar x:Name="DownloadProgress" Width="200" Height="16" Maximum="100"/><Button Content="Xóa log" Click="ClearDownloadLog_Click"/></StackPanel></Grid></GroupBox>
+                    <Grid x:Name="DownloadResultsOverlay" Grid.Row="0" Grid.RowSpan="5" Background="#00000000" Visibility="Hidden" MouseLeftButtonDown="DownloadResultsBackdrop_Click">
+                        <Grid x:Name="DownloadResultsDrawer" HorizontalAlignment="Right" Width="520" Background="White">
+                            <Grid.RenderTransform>
+                                <TranslateTransform x:Name="DrawerTransform" X="520"/>
+                            </Grid.RenderTransform>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock x:Name="DownloadResultsHeader" Grid.Column="0" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <Button Grid.Column="1" Content="✕" Click="CloseDownloadResultsDrawer_Click" Padding="5,2" FontSize="16"/>
+                            </Grid>
+                            <DataGrid x:Name="DownloadResultsGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Single" MouseDoubleClick="DownloadResultsGrid_MouseDoubleClick">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Mã" Binding="{Binding Code}" Width="80"/>
+                                    <DataGridTextColumn Header="PDF" Binding="{Binding PdfStatus}" Width="80"/>
+                                    <DataGridTextColumn Header="IES" Binding="{Binding IesStatus}" Width="80"/>
+                                    <DataGridTextColumn Header="LDT" Binding="{Binding LdtStatus}" Width="80"/>
+                                    <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusDescription}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="LdtEditorTab" Header="LDT Editor" AllowDrop="True" PreviewDragOver="LdtEditor_DragOver" PreviewDrop="LdtEditor_Drop">
+                <Grid x:Name="LdtEditorRoot" Background="Transparent">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="LdtEditorPlaceholder" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center" Text="Kéo một file .ldt, hoặc một file .ies kèm tối đa một file PDF" Foreground="#A0A0A0" FontStyle="Italic" Grid.Row="0"/>
+                    <Grid Grid.Row="0" Margin="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Mở LDT" Click="OpenLdt_Click" Padding="7,7"/>
+                            <Button Content="Mở IES" Click="OpenIes_Click" Padding="7,7"/>
+                            <Button Content="Chuyển sang LDT..." Click="ConvertIes_Click" Padding="7,7" IsEnabled="{Binding CanConvertIes}" FontWeight="SemiBold"/>
+                            <Button Content="Đồng bộ" ToolTip="Đồng bộ grid → raw" Click="SyncLdt_Click" Padding="7,7" IsEnabled="{Binding CanEditLdt}"/>
+                            <Button Content="Nạp lại" Click="ReloadLdt_Click" Padding="7,7" IsEnabled="{Binding CanReloadPhotometry}"/>
+                            <Button Content="Lưu" Click="SaveLdt_Click" Padding="7,7" IsEnabled="{Binding CanEditLdt}"/>
+                            <Button Content="Lưu thành" Click="SaveAsLdt_Click" Padding="7,7" IsEnabled="{Binding CanEditLdt}"/>
+                            <Button Content="Mở thư mục" Click="OpenLdtFolder_Click" Padding="7,7" IsEnabled="{Binding CanOpenPhotometryFolder}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" x:Name="LdtPathText" Margin="8" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                    </Grid>
+                    <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <GroupBox Header="Nội dung raw"><TextBox x:Name="LdtRawBox" AcceptsReturn="True" AcceptsTab="True" FontFamily="Consolas" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" TextChanged="LdtRawBox_TextChanged" IsReadOnly="{Binding IsIesPreview}"/></GroupBox>
+                        <GroupBox Grid.Column="1" Header="Các dòng / trường"><DataGrid x:Name="LdtGrid" AutoGenerateColumns="False" CanUserAddRows="False" CellEditEnding="LdtGrid_CellEditEnding" IsReadOnly="{Binding IsIesPreview}"><DataGrid.Columns><DataGridTextColumn Header="#" Binding="{Binding Index}" IsReadOnly="True" Width="45"/><DataGridTextColumn Header="Nhóm" Binding="{Binding Section}" IsReadOnly="True" Width="80"/><DataGridTextColumn Header="Trường" Binding="{Binding Name}" IsReadOnly="True" Width="155"/><DataGridTextColumn Header="Giá trị" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*"/></DataGrid.Columns></DataGrid></GroupBox>
+                    </Grid>
+                    <TextBlock Grid.Row="2" x:Name="LdtStatus" Margin="10"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
