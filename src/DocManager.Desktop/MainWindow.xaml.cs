@@ -12,6 +12,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
+using DragDropEffects = System.Windows.DragDropEffects;
 using FormsScreen = System.Windows.Forms.Screen;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
@@ -60,6 +61,8 @@ public partial class MainWindow : Window
     private IReadOnlyList<DownloadLogEntry>? _lastDownloadResults;
     private readonly ObservableCollection<DownloadResultRow> _downloadResultRows = [];
     private System.Windows.Media.Animation.Storyboard? _drawerStoryboard;
+    private FloatingImageWindow? _floatingImageWindow;
+    private string? _floatingImagePath;
 
     public MainWindow() : this(new ShellFileLauncher())
     {
@@ -69,6 +72,7 @@ public partial class MainWindow : Window
     {
         _fileLauncher = fileLauncher ?? throw new ArgumentNullException(nameof(fileLauncher));
         InitializeComponent();
+        FloatingOpacitySlider.ValueChanged += FloatingOpacitySlider_ValueChanged;
         RestoreWindowState();
         DataContext = _state;
         PdfList.ItemsSource = _pdfs;
@@ -88,6 +92,15 @@ public partial class MainWindow : Window
         UpdateLdtEditorPlaceholder();
         DownloadResultsGrid.ItemsSource = _downloadResultRows;
         DownloadResultsOverlay.Visibility = System.Windows.Visibility.Hidden;
+        FloatingOpacitySlider.Value = _userSettings.FloatingImageOpacityPercent;
+        FloatingImageTopmostCheck.IsChecked = _userSettings.FloatingImageTopmost;
+        FloatingImageClickThroughCheck.IsChecked = _userSettings.FloatingImageClickThrough;
+        if (!string.IsNullOrEmpty(_userSettings.LastFloatingImagePath))
+        {
+            _floatingImagePath = _userSettings.LastFloatingImagePath;
+            FloatingImagePathText.Text = _userSettings.LastFloatingImagePath;
+            UpdateFloatingImagePreview();
+        }
     }
 
     private void SelectPdf_Click(object sender, RoutedEventArgs e)
@@ -956,6 +969,11 @@ public partial class MainWindow : Window
         }
         SaveWindowState();
         SaveManualPathSettings();
+        if (_floatingImageWindow is not null)
+        {
+            _floatingImageWindow.Close();
+            _floatingImageWindow = null;
+        }
         _isClosing = true;
         _cancellation?.Cancel();
         _state.IsBusy = false;
@@ -1038,10 +1056,33 @@ public partial class MainWindow : Window
     {
         var menu = new ContextMenuStrip();
         var restoreItem = new ToolStripMenuItem("Mở cửa sổ", null, (s, e) => RestoreWindowFromTray());
-        var exitItem = new ToolStripMenuItem("Thoát", null, (s, e) => Close());
+
+        var toggleImageItem = new ToolStripMenuItem("Ẩn/hiện ảnh ghim", null, (s, e) => ToggleFloatingImageVisibility());
+        var clickThroughItem = new ToolStripMenuItem("Xuyên chuột", null, (s, e) => ToggleFloatingImageClickThrough());
+
         menu.Items.Add(restoreItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(toggleImageItem);
+        menu.Items.Add(clickThroughItem);
+        menu.Items.Add(new ToolStripSeparator());
+        var exitItem = new ToolStripMenuItem("Thoát", null, (s, e) => Close());
         menu.Items.Add(exitItem);
         return menu;
+    }
+
+    private void ToggleFloatingImageVisibility()
+    {
+        if (_floatingImageWindow is null || string.IsNullOrEmpty(_floatingImagePath)) return;
+        if (_floatingImageWindow.IsVisible)
+            _floatingImageWindow.Hide();
+        else
+            FloatingImage_ShowOverlay_Click(null!, null!);
+    }
+
+    private void ToggleFloatingImageClickThrough()
+    {
+        if (_floatingImageWindow is null) return;
+        FloatingImageClickThroughCheck.IsChecked = !FloatingImageClickThroughCheck.IsChecked;
     }
 
     private void TrayIcon_MouseClick(object? sender, System.Windows.Forms.MouseEventArgs e)
@@ -1494,6 +1535,230 @@ public partial class MainWindow : Window
     }
 
     private void SaveUserSettings() => _userSettingsStore.Save(_userSettings);
+
+    private void FloatingImage_ChooseImage_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            LoadFloatingImage(dialog.FileName);
+        }
+    }
+
+    private void FloatingImage_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            var imageFile = files.FirstOrDefault(f =>
+                new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" }
+                    .Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase));
+            if (imageFile is not null)
+            {
+                e.Effects = DragDropEffects.Copy;
+                e.Handled = true;
+                return;
+            }
+        }
+        e.Effects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void FloatingImage_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            var imageFile = files.FirstOrDefault(f =>
+                new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" }
+                    .Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase));
+            if (imageFile is not null)
+            {
+                LoadFloatingImage(imageFile);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void LoadFloatingImage(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath))
+            {
+                MessageBox.Show($"Tệp không tồn tại: {path}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            _floatingImagePath = fullPath;
+            FloatingImagePathText.Text = fullPath;
+            UpdateFloatingImagePreview();
+            _userSettings = _userSettings with { LastFloatingImagePath = fullPath };
+            SaveUserSettings();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể tải ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void UpdateFloatingImagePreview()
+    {
+        if (string.IsNullOrEmpty(_floatingImagePath))
+        {
+            FloatingImagePreview.Source = null;
+            return;
+        }
+
+        try
+        {
+            using (var stream = File.OpenRead(_floatingImagePath))
+            {
+                var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count > 0)
+                {
+                    var frame = decoder.Frames[0];
+                    int previewWidth = (int)FloatingImagePreview.Width;
+                    if (previewWidth > 0 && previewWidth < frame.PixelWidth)
+                    {
+                        var scaledFrame = new TransformedBitmap(frame, new ScaleTransform(previewWidth / (double)frame.PixelWidth, previewWidth / (double)frame.PixelWidth));
+                        scaledFrame.Freeze();
+                        FloatingImagePreview.Source = scaledFrame;
+                    }
+                    else
+                    {
+                        frame.Freeze();
+                        FloatingImagePreview.Source = frame;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể hiển thị xem trước: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            FloatingImagePreview.Source = null;
+        }
+    }
+
+    private void FloatingImage_ShowOverlay_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_floatingImagePath))
+        {
+            MessageBox.Show("Hãy chọn ảnh trước.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_floatingImageWindow is null)
+        {
+            _floatingImageWindow = new FloatingImageWindow();
+            _floatingImageWindow.OpacityChanged += (s, e) =>
+            {
+                var newOpacity = _floatingImageWindow.CurrentOpacityPercent;
+                FloatingOpacitySlider.Value = newOpacity;
+                _userSettings = _userSettings with { FloatingImageOpacityPercent = newOpacity };
+                SaveUserSettings();
+            };
+            _floatingImageWindow.BoundsChanged += (s, e) =>
+            {
+                if (_floatingImageWindow.GetCurrentBounds() is var bounds and not null)
+                {
+                    _userSettings = _userSettings with
+                    {
+                        FloatingImageLeft = bounds.Value.Item1,
+                        FloatingImageTop = bounds.Value.Item2,
+                        FloatingImageWidth = bounds.Value.Item3,
+                        FloatingImageHeight = bounds.Value.Item4
+                    };
+                    SaveUserSettings();
+                }
+            };
+            _floatingImageWindow.ClosedByUser += (s, e) =>
+            {
+                if (_floatingImageWindow.GetCurrentBounds() is var bounds and not null)
+                {
+                    _userSettings = _userSettings with
+                    {
+                        FloatingImageLeft = bounds.Value.Item1,
+                        FloatingImageTop = bounds.Value.Item2,
+                        FloatingImageWidth = bounds.Value.Item3,
+                        FloatingImageHeight = bounds.Value.Item4
+                    };
+                    SaveUserSettings();
+                }
+                _floatingImageWindow = null;
+            };
+        }
+
+        try
+        {
+            _floatingImageWindow.LoadImage(_floatingImagePath);
+            _floatingImageWindow.SetOpacityPercent(FloatingOpacitySlider.Value);
+            _floatingImageWindow.SetTopmost(FloatingImageTopmostCheck.IsChecked == true);
+            _floatingImageWindow.SetClickThrough(FloatingImageClickThroughCheck.IsChecked == true);
+            _floatingImageWindow.ApplySavedBounds(_userSettings.FloatingImageLeft, _userSettings.FloatingImageTop,
+                                                  _userSettings.FloatingImageWidth, _userSettings.FloatingImageHeight);
+
+            if (_floatingImageWindow.Owner == null)
+                _floatingImageWindow.Owner = this;
+
+            _floatingImageWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể hiển thị ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void FloatingImage_HideOverlay_Click(object sender, RoutedEventArgs e)
+    {
+        if (_floatingImageWindow is not null && _floatingImageWindow.IsVisible)
+        {
+            _floatingImageWindow.Hide();
+        }
+    }
+
+    private void FloatingOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (FloatingOpacityPercent is null || FloatingImageOpacityLabel is null) return;
+        var value = (int)FloatingOpacitySlider.Value;
+        FloatingOpacityPercent.Text = $"{value}%";
+        FloatingImageOpacityLabel.Text = $"{value}%";
+
+        if (_floatingImageWindow is not null && _floatingImageWindow.IsVisible)
+        {
+            _floatingImageWindow.SetOpacityPercent(value);
+        }
+
+        _userSettings = _userSettings with { FloatingImageOpacityPercent = value };
+        SaveUserSettings();
+    }
+
+    private void FloatingImageTopmostCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        var isChecked = FloatingImageTopmostCheck.IsChecked == true;
+        if (_floatingImageWindow is not null)
+        {
+            _floatingImageWindow.SetTopmost(isChecked);
+        }
+        _userSettings = _userSettings with { FloatingImageTopmost = isChecked };
+        SaveUserSettings();
+    }
+
+    private void FloatingImageClickThroughCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        var isChecked = FloatingImageClickThroughCheck.IsChecked == true;
+        if (_floatingImageWindow is not null)
+        {
+            _floatingImageWindow.SetClickThrough(isChecked);
+        }
+        _userSettings = _userSettings with { FloatingImageClickThrough = isChecked };
+        SaveUserSettings();
+    }
 
     private static string ExistingFile(string? path, string extension)
     {
