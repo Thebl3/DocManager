@@ -72,6 +72,7 @@ public partial class MainWindow : Window
     {
         _fileLauncher = fileLauncher ?? throw new ArgumentNullException(nameof(fileLauncher));
         InitializeComponent();
+        FloatingOpacitySlider.ValueChanged += FloatingOpacitySlider_ValueChanged;
         RestoreWindowState();
         DataContext = _state;
         PdfList.ItemsSource = _pdfs;
@@ -1723,6 +1724,7 @@ public partial class MainWindow : Window
 
     private void FloatingOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (FloatingOpacityPercent is null || FloatingImageOpacityLabel is null) return;
         var value = (int)FloatingOpacitySlider.Value;
         FloatingOpacityPercent.Text = $"{value}%";
         FloatingImageOpacityLabel.Text = $"{value}%";
