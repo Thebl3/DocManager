@@ -193,6 +193,49 @@
                     <TextBlock Grid.Row="2" x:Name="LdtStatus" Margin="10"/>
                 </Grid>
             </TabItem>
+            <TabItem x:Name="FloatingImageTab" Header="Floating Image" AllowDrop="True" PreviewDragOver="FloatingImage_DragOver" PreviewDrop="FloatingImage_Drop">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <WrapPanel Grid.Row="0" Margin="3">
+                        <Button Content="Chọn ảnh..." Click="FloatingImage_ChooseImage_Click"/>
+                        <Button Content="Ghim lên màn hình" Click="FloatingImage_ShowOverlay_Click"/>
+                        <Button Content="Bỏ ghim" Click="FloatingImage_HideOverlay_Click"/>
+                        <CheckBox x:Name="FloatingImageTopmostCheck" Content="Luôn trên cùng" IsChecked="True" Margin="12,8" VerticalAlignment="Center" Checked="FloatingImageTopmostCheck_Changed" Unchecked="FloatingImageTopmostCheck_Changed"/>
+                        <CheckBox x:Name="FloatingImageClickThroughCheck" Content="Xuyên chuột (click-through)" Margin="12,8" VerticalAlignment="Center" Checked="FloatingImageClickThroughCheck_Changed" Unchecked="FloatingImageClickThroughCheck_Changed"/>
+                    </WrapPanel>
+                    <Grid Grid.Row="1" Margin="8,0,8,4">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="50"/></Grid.ColumnDefinitions>
+                        <Label Content="Ảnh:" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" x:Name="FloatingImagePathText" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                        <Label Grid.Column="2" Content="Độ mờ:" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" x:Name="FloatingImageOpacityLabel" Text="100%" VerticalAlignment="Center" TextAlignment="Right"/>
+                    </Grid>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+                        <GroupBox Grid.Column="0" Header="Xem trước ảnh">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <Border Margin="6" Padding="8" BorderBrush="#C9D1D9" BorderThickness="1" Background="White">
+                                    <Image x:Name="FloatingImagePreview" Stretch="Uniform"/>
+                                </Border>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Grid.Column="1" Header="Tùy chỉnh">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Margin="6">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Label Content="Độ mờ:" VerticalAlignment="Center" Padding="0"/>
+                                        <Slider x:Name="FloatingOpacitySlider" Minimum="10" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Width="120" Margin="6,0" VerticalAlignment="Center" ValueChanged="FloatingOpacitySlider_ValueChanged"/>
+                                        <TextBlock x:Name="FloatingOpacityPercent" Text="100%" VerticalAlignment="Center" Margin="6,0" Width="40"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Grid.Row="2" Margin="6" Foreground="#606060" FontSize="11" TextWrapping="Wrap" Text="Chuột trong overlay:&#10;Kéo để di chuyển&#10;Lăn chuột để phóng to&#10;Ctrl+Lăn để đổi độ mờ&#10;Phải chuột để menu"/>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>

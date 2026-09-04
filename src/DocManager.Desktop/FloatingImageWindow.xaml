@@ -1,0 +1,9 @@
+<Window x:Class="DocManager.Desktop.FloatingImageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Floating Image" WindowStyle="None" Background="White"
+        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True">
+    <Grid Background="White">
+        <Image x:Name="DisplayImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" MouseWheel="DisplayImage_MouseWheel" MouseLeftButtonDown="DisplayImage_MouseLeftButtonDown"/>
+    </Grid>
+</Window>

@@ -18,6 +18,14 @@ public sealed record UserSettingsData
     public bool MergeReports { get; init; } = false;
     public bool? AutoUpdateCadSymbols { get; init; } = null;
     public bool? DownloadIes { get; init; } = null;
+    public string? LastFloatingImagePath { get; init; } = null;
+    public double FloatingImageOpacityPercent { get; init; } = 100.0;
+    public bool FloatingImageTopmost { get; init; } = true;
+    public bool FloatingImageClickThrough { get; init; } = false;
+    public double? FloatingImageLeft { get; init; } = null;
+    public double? FloatingImageTop { get; init; } = null;
+    public double? FloatingImageWidth { get; init; } = null;
+    public double? FloatingImageHeight { get; init; } = null;
 }
 
 public sealed class UserSettingsStore
@@ -66,6 +74,11 @@ public sealed class UserSettingsStore
             pendingCodes = pendingCodes.Substring(0, 100_000);
         }
 
+        var opacityPercent = Math.Max(10.0, Math.Min(100.0, settings.FloatingImageOpacityPercent));
+        var (floatingImageLeft, floatingImageTop, floatingImageWidth, floatingImageHeight) =
+            ValidateFloatingImageBounds(settings.FloatingImageLeft, settings.FloatingImageTop,
+                                       settings.FloatingImageWidth, settings.FloatingImageHeight);
+
         return new UserSettingsData
         {
             CatalogueRoot = NormalizePath(settings.CatalogueRoot) ?? AdjacentProductFamilyRoot,
@@ -80,7 +93,23 @@ public sealed class UserSettingsStore
             PendingCodes = pendingCodes,
             MergeReports = settings.MergeReports,
             AutoUpdateCadSymbols = settings.AutoUpdateCadSymbols ?? true,
-            DownloadIes = settings.DownloadIes ?? true
+            DownloadIes = settings.DownloadIes ?? true,
+            LastFloatingImagePath = NormalizeExistingFile(settings.LastFloatingImagePath, ".png") is { Length: > 0 } png ? png :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".jpg") is { Length: > 0 } jpg ? jpg :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".jpeg") is { Length: > 0 } jpeg ? jpeg :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".bmp") is { Length: > 0 } bmp ? bmp :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".gif") is { Length: > 0 } gif ? gif :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".tif") is { Length: > 0 } tif ? tif :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".tiff") is { Length: > 0 } tiff ? tiff :
+                                    NormalizeExistingFile(settings.LastFloatingImagePath, ".webp") is { Length: > 0 } webp ? webp :
+                                    null,
+            FloatingImageOpacityPercent = opacityPercent,
+            FloatingImageTopmost = settings.FloatingImageTopmost,
+            FloatingImageClickThrough = settings.FloatingImageClickThrough,
+            FloatingImageLeft = floatingImageLeft,
+            FloatingImageTop = floatingImageTop,
+            FloatingImageWidth = floatingImageWidth,
+            FloatingImageHeight = floatingImageHeight
         };
     }
 
@@ -128,6 +157,11 @@ public sealed class UserSettingsStore
         var savedRoot = NormalizeExistingDirectory(saved?.CatalogueRoot);
         var catalogueRoot = string.IsNullOrEmpty(savedRoot) ? AdjacentProductFamilyRoot : savedRoot;
         var savedPricelist = NormalizeExistingFile(saved?.PricelistPath, ".xlsx");
+        var savedImagePath = ResolveImagePath(saved?.LastFloatingImagePath);
+        var opacityPercent = Math.Max(10.0, Math.Min(100.0, saved?.FloatingImageOpacityPercent ?? 100.0));
+        var (floatingImageLeft, floatingImageTop, floatingImageWidth, floatingImageHeight) =
+            ValidateFloatingImageBounds(saved?.FloatingImageLeft, saved?.FloatingImageTop,
+                                       saved?.FloatingImageWidth, saved?.FloatingImageHeight);
 
         return new UserSettingsData
         {
@@ -143,8 +177,27 @@ public sealed class UserSettingsStore
             PendingCodes = saved?.PendingCodes ?? string.Empty,
             MergeReports = saved?.MergeReports ?? false,
             AutoUpdateCadSymbols = saved?.AutoUpdateCadSymbols ?? true,
-            DownloadIes = saved?.DownloadIes ?? true
+            DownloadIes = saved?.DownloadIes ?? true,
+            LastFloatingImagePath = savedImagePath,
+            FloatingImageOpacityPercent = opacityPercent,
+            FloatingImageTopmost = saved?.FloatingImageTopmost ?? true,
+            FloatingImageClickThrough = saved?.FloatingImageClickThrough ?? false,
+            FloatingImageLeft = floatingImageLeft,
+            FloatingImageTop = floatingImageTop,
+            FloatingImageWidth = floatingImageWidth,
+            FloatingImageHeight = floatingImageHeight
         };
+    }
+
+    private static string? ResolveImagePath(string? path)
+    {
+        var extensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
+        foreach (var ext in extensions)
+        {
+            var resolved = NormalizeExistingFile(path, ext);
+            if (!string.IsNullOrEmpty(resolved)) return resolved;
+        }
+        return null;
     }
 
     private string DiscoverPricelist(string catalogueRoot)
@@ -215,4 +268,18 @@ public sealed class UserSettingsStore
 
     private static bool IsOptionalSettingsException(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or JsonException or NotSupportedException or ArgumentException or SecurityException;
+
+    private static (double?, double?, double?, double?) ValidateFloatingImageBounds(
+        double? left, double? top, double? width, double? height)
+    {
+        var isLeftValid = left.HasValue && double.IsFinite(left.Value);
+        var isTopValid = top.HasValue && double.IsFinite(top.Value);
+        var isWidthValid = width.HasValue && double.IsFinite(width.Value) && width.Value > 0;
+        var isHeightValid = height.HasValue && double.IsFinite(height.Value) && height.Value > 0;
+
+        if (!isLeftValid || !isTopValid || !isWidthValid || !isHeightValid)
+            return (null, null, null, null);
+
+        return (left, top, width, height);
+    }
 }
